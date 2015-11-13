@@ -1,0 +1,27 @@
+<itk:DistributionEnvelope xmlns:itk="urn:nhs-itk:ns:201005" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <itk:header service="urn:nhs-itk:services:201005:SendInfrastructureAck-v1-0" trackingid="59DBE7EC-7EBD-41ED-A896-A5FFDB915575">
+               <itk:addresslist>
+                       <itk:address uri="urn:nhs-uk:addressing:ods:RTQ" />
+               </itk:addresslist>
+               <itk:auditIdentity>
+                       <itk:id uri="urn:nhs-uk:identity:RHM:test:cdaresponder" />
+               </itk:auditIdentity>
+               <itk:manifest count="1">                     
+                        <itk:manifestitem id="uuid_${exchange.properties.PAYLOAD_UUID}" mimetype="text/xml" />
+               </itk:manifest>
+               <itk:senderAddress uri="urn:nhs-uk:addressing:ods:RHM:test:cdaresponder" />
+               <itk:handlingSpecification>
+                       <itk:spec value="urn:nhs-itk:interaction:ITKInfrastructureAcknowledgement-v1-0" key="urn:nhs-itk:ns:201005:interaction" />
+               </itk:handlingSpecification>
+        </itk:header>
+        <itk:payloads count="1">
+               <itk:payload id="uuid_${exchange.properties.PAYLOAD_UUID}">
+                       <itk:InfrastructureResponse timestamp="2015-11-09T09:48:49Z" serviceRef="urn:nhs-itk:services:201005:SendCDADocument-v2-0" trackingIdRef="fb25b8d8-1f03-4586-b21e-57d37cee1983" result="OK">
+                               <itk:reportingIdentity>
+                                      <itk:id uri="urn:nhs-uk:identity:RHM:test:cdaresponder" />
+                               </itk:reportingIdentity>
+                                <itk:errors />
+                       </itk:InfrastructureResponse>
+               </itk:payload>
+        </itk:payloads>
+</itk:DistributionEnvelope>
