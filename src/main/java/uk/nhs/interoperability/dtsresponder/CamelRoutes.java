@@ -32,18 +32,18 @@ public class CamelRoutes extends RouteBuilder {
 		  .choice()
 		  		.when().xpath("/itk:DistributionEnvelope/itk:header/@service = 'urn:nhs-itk:services:201005:SendCDADocument-v2-0'", ns)
 					// Set some values to insert into our response template
-					.process(new createDynamicProperties())
 					.setProperty("RESPONDER_ADDRESS", simple("{{recieverAddress}}"))
 					.setProperty("RECEIVER_ADDRESS",  xpath("/itk:DistributionEnvelope/itk:header/itk:addresslist/itk:address[1]/@uri").resultType(String.class).namespaces(ns))
 					.setProperty("SENDER_ADDRESS",    xpath("/itk:DistributionEnvelope/itk:header/itk:senderAddress/@uri").resultType(String.class).namespaces(ns))
 					.setProperty("TRACKING_ID",       xpath("/itk:DistributionEnvelope/itk:header/@trackingid").resultType(String.class).namespaces(ns))
+					.process(new addDynamicProperties())
 					// Insert them into the velocity template
 					.to("velocity:inf-ack.vm")
 					// Output the result file in the output path
 					.to("file://{{outPath}}?fileName=response-${file:name}")
 		  .otherwise()
 		  		// We received some other kind of message, so just log it and stop processing.
-		  		.log("Received an unexpected message, ignoring.");
+		  		.log("*********** Received an unexpected message, ignoring. *****************");
 		
 		
 		/*
@@ -72,7 +72,7 @@ public class CamelRoutes extends RouteBuilder {
 	
 	
 	// Simple class to generate a UUID
-	public class createDynamicProperties implements Processor {
+	public class addDynamicProperties implements Processor {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		public void process(Exchange exchange) throws Exception {
 	    
