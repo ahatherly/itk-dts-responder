@@ -3,21 +3,28 @@ package uk.nhs.interoperability.dtsresponder;
 import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.main.Main;
 
+import com.mongodb.MongoClient;
+
 public class StartResponder {
 	
 	public static void main(String[] args) throws Exception {
-		// create a Main instance
+		// Create a Main instance
         Main main = new Main();
-        // enable hangup support so you can press ctrl + c to terminate the JVM
+        // Enable hangup support so you can press ctrl + c to terminate the JVM
         main.enableHangupSupport();
-        // bind MyBean into the registery
-        //main.bind("foo", new MyBean());
+        
+        // Bind some configuration values into Camel so they are available in routes
         PropertiesComponent pc = new PropertiesComponent();
         pc.setLocation("classpath:responder.properties");
         main.bind("properties", pc);
-        // add routes
+
+        // Add the MongoDB bean into the registry (no hostname or port required for localhost)
+        main.bind("mongoBean", new MongoClient());
+
+        // Add routes
         main.addRouteBuilder(new CamelRoutes());
-        // run until you terminate the JVM
+        
+        // Run until you terminate the JVM
         System.out.println("Starting Camel. Use ctrl + c to terminate the JVM.\n");
         main.run();
 	}

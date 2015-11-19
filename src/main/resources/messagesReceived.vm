@@ -1,0 +1,37 @@
+<html>
+<head>
+<style>
+body {
+	font-family: "Comic Sans MS", cursive, sans-serif; 
+}
+td, th {
+	border-bottom: thin solid gray;
+	padding: 6px;
+}
+th {
+	background-color: lightgreen;
+}
+</style>
+</head>
+<body>
+<h1>DTS Responder</h1>
+<h2>Messages Received</h2>
+<table>
+	<tr>
+		<th>Tracking ID</th>
+		<th>Message Type</th>
+		<th>Sender</th>
+		<th>&nbsp;</th>
+	</tr>
+#foreach( $message in $body )
+    <tr>
+    	<td>$message.get("itk:header").get("@trackingid")</td>
+    	<td>$message.get("itk:header").get("@service")</td>
+    	<td>$message.get("itk:header").get("itk:senderAddress").get("@uri")</td>
+    	<td><a href="/message?id=$message.get("_id")">Show full message</a></td>
+    </tr>
+#end
+</table>
+</ul>
+</body>
+</html>
