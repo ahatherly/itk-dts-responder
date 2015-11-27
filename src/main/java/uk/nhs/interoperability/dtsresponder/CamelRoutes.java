@@ -60,14 +60,14 @@ public class CamelRoutes extends RouteBuilder {
 		/*
 		 * Show a list of the messages that have been received (taken from MongoDB)
 		 */
-		from("jetty:http://0.0.0.0:8888?traceEnabled=true")
+		from("jetty:http://{{webGUIAddress}}?traceEnabled=true")
 			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findAll")
 			.to("velocity:messagesReceived.vm");
 		
 		/*
 		 * Show a specific message
 		 */
-		from("jetty:http://0.0.0.0:8888/message?traceEnabled=true")
+		from("jetty:http://{{webGUIAddress}}/message?traceEnabled=true")
 			.setBody().simple("{\"_id\": {\"$oid\":\"${header.id}\"}}")
 			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findOneByQuery");
     }

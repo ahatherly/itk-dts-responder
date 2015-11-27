@@ -1,0 +1,25 @@
+<DTSControl>
+  <Version>1.0</Version>
+  <AddressType>ALL</AddressType>
+  <MessageType>Data</MessageType>
+  <From_ESMTP>meshhc2@dts.nhs.uk</From_ESMTP>
+  <From_DTS>meshhc2</From_DTS>
+  <To_ESMTP>meshhc3@dts.nhs.uk</To_ESMTP>
+  <To_DTS>meshhc3</To_DTS>
+  <Subject></Subject>
+  <LocalId>5c433394-a440-4df2-92c0-b9a4ef83e3bc</LocalId>
+  <DTSId>dtsapp05-201510231548121908</DTSId>
+  <WorkflowId>TOC_DISCH_DMS_ACK</WorkflowId>
+  <ProcessId></ProcessId>
+  <Compress>N</Compress>
+  <Encrypted>N</Encrypted>
+  <DataChecksum></DataChecksum>
+  <IsCompressed>N</IsCompressed>
+  <StatusRecord>
+    <DateTime>20151023154813</DateTime>
+    <Event>TRANSFER</Event>
+    <Status>SUCCESS</Status>
+    <StatusCode>00</StatusCode>
+    <Description>Transferred to recipient mailbox</Description>
+  </StatusRecord>
+</DTSControl>
