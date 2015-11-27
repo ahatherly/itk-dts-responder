@@ -41,6 +41,9 @@ public class CamelRoutes extends RouteBuilder {
 					.to("velocity:inf-ack.vm")
 					// Output the result file in the output path
 					.to("file://{{outPath}}?fileName=response-${file:name}")
+					// And output a control file
+					.to("velocity:control-file.vm")
+					.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.ctl")
 					// Now add any additional properties we need for the business ACK
 					//.to("velocity:bus-ack.vm")
 		  .otherwise()
