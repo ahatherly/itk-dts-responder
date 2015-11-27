@@ -58,4 +58,65 @@
 			<version>2.15.2</version>
 		</dependency>
   </dependencies>
+  
+  <build>
+		<plugins>
+			<!-- Create an executable jar executable with configured class-path -->
+			<plugin>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>uk.nhs.interoperability.dtsresponder.StartResponder</mainClass>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib/</classpathPrefix>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+		
+			<!-- Assemble a binary package with jar and library dependencies -->
+			<!-- <plugin>
+				<artifactId>maven-remote-resources-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>process-remote-resources</id>
+						<goals>
+							<goal>bundle</goal>
+						</goals>
+						<configuration>
+							<resourceBundles>
+								<resourceBundle>${project.groupId}:ciao-parent-support:${project.version}</resourceBundle>
+							</resourceBundles>
+							<skip>${ciao.skipBinArchive}</skip>
+							<attachToMain>false</attachToMain>
+							<attachToTest>false</attachToTest>
+							<outputDirectory>${project.build.directory}/ciao-parent-support</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin> -->
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<skipAssembly>false</skipAssembly>
+					<descriptors>
+						<descriptor>src/main/resources/assemblies/bin.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assemble-bin-archive</id>
+						<inherited>true</inherited>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins> 
+	</build>
+  
 </project>

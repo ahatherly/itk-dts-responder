@@ -41,6 +41,8 @@ public class CamelRoutes extends RouteBuilder {
 					.to("velocity:inf-ack.vm")
 					// Output the result file in the output path
 					.to("file://{{outPath}}?fileName=response-${file:name}")
+					// Now add any additional properties we need for the business ACK
+					//.to("velocity:bus-ack.vm")
 		  .otherwise()
 		  		// We received some other kind of message, so just log it and stop processing.
 		  		.log("*********** Received an unexpected message, ignoring. *****************");
