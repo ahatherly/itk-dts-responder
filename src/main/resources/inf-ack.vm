@@ -4,7 +4,7 @@
                        <itk:address uri="${exchange.properties.SENDER_ADDRESS}" />
                </itk:addresslist>
                <itk:auditIdentity>
-                       <itk:id uri="${exchange.properties.RESPONDER_ADDRESS}" />
+                       <itk:id uri="${exchange.properties.RESPONDER_IDENTITY}" />
                </itk:auditIdentity>
                <itk:manifest count="1">                     
                         <itk:manifestitem id="uuid_${exchange.properties.PAYLOAD_UUID}" mimetype="text/xml" />
@@ -20,7 +20,7 @@
                        				serviceRef="urn:nhs-itk:services:201005:SendCDADocument-v2-0"
                        				trackingIdRef="${exchange.properties.TRACKING_ID}" result="OK">
                                <itk:reportingIdentity>
-                                      <itk:id uri="${exchange.properties.RESPONDER_ADDRESS}" />
+                                      <itk:id uri="${exchange.properties.RESPONDER_IDENTITY}" />
                                </itk:reportingIdentity>
                                 <itk:errors />
                        </itk:InfrastructureResponse>

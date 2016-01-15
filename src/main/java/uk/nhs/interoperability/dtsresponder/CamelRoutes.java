@@ -31,10 +31,12 @@ public class CamelRoutes extends RouteBuilder {
     	ns.add("hl7", "urn:hl7-org:v3");
     	ns.add("npfitlc", "NPFIT:HL7:Localisation");
 		
+    	
 		/*
 		 * This route will take whatever control files appear and try to read the corresponding dat file
 		 */
 		from("file://{{mailboxPath}}?move={{donePath}}&include={{filenamePattern}}")
+		  .streamCaching()
 		  // First, check this is a control file
 		  .choice()
 		  		.when().xpath("/DTSControl/MessageType = 'Data'")
@@ -62,30 +64,55 @@ public class CamelRoutes extends RouteBuilder {
 		  		.choice()
 			  		.when().xpath("/itk:DistributionEnvelope/itk:header/@service = 'urn:nhs-itk:services:201005:SendCDADocument-v2-0'", ns)
 						// Get some more values from the data file to insert into our response data file
-						.setProperty("RESPONDER_ADDRESS", simple("{{recieverAddress}}"))
+						.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
+						.setProperty("RESPONDER_IDENTITY", simple("{{responderIdentity}}"))
 						.setProperty("RECEIVER_ADDRESS",  xpath("/itk:DistributionEnvelope/itk:header/itk:addresslist/itk:address[1]/@uri").resultType(String.class).namespaces(ns))
 						.setProperty("SENDER_ADDRESS",    xpath("/itk:DistributionEnvelope/itk:header/itk:senderAddress/@uri").resultType(String.class).namespaces(ns))
 						.setProperty("TRACKING_ID",       xpath("/itk:DistributionEnvelope/itk:header/@trackingid").resultType(String.class).namespaces(ns))
+						.setProperty("INTERACTION_ID",    xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:interaction']/@value").resultType(String.class).namespaces(ns))
+						.setProperty("ORIG_PAYLOAD_ID",   xpath("/itk:DistributionEnvelope/itk:payloads/itk:payload/@id").resultType(String.class).namespaces(ns))
 						.process(new addDynamicProperties())
-						
-						// Insert them into the velocity template
-						.log("Writing Infrastructure ACK...")
-						.to("velocity:inf-ack.vm")
-						// Output the result file in the output path
-						.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.dat")
-						// And now insert the values into another template for the control file
-						.log("Writing outgoing control file...")
-						.to("velocity:control-file.vm")
-						.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.ctl")
-						
-						// TODO: Check what ACKs are requested
-						// TODO: Populate the business ACK template and generate that along with a control file
-						// Now add any additional properties we need for the business ACK
-						//.to("velocity:bus-ack.vm")
+						.wireTap("direct:sendInfAckIfRequested").end()
+						.wireTap("direct:waitToSendBusAck").end()
 					.otherwise()
 		  		// We received some other kind of message, so just log it and stop processing.
 		  		.log("*********** Received an unexpected message, ignoring. *****************");
-		  
+		
+		
+		from("direct:sendInfAckIfRequested")
+			.choice()	
+				.when().xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:infackrequested']/@value = 'true'", ns)
+				// Insert them into the velocity template
+					.log("Writing Infrastructure ACK...")
+					.to("velocity:inf-ack.vm")
+					// Output the result file in the output path
+					.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.dat")
+					// And now insert the values into another template for the control file
+					.log("Writing outgoing control file for Inf Ack...")
+					.to("velocity:control-file.vm")
+					.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.ctl")
+					.log("Control file written")
+				.otherwise()
+					.log("We received a message, but no infrastructure ACK was requested.");
+		
+		from("direct:waitToSendBusAck")
+			.delay(5000)
+			.to("direct:sendBusAckIfRequested");
+		
+		from("direct:sendBusAckIfRequested")
+			.choice()	
+				.when().xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:ackrequested']/@value = 'true'", ns)
+				    .log("Writing Business ACK...")
+				    .to("velocity:bus-ack.vm")
+				    // Output the result file in the output path
+					.to("file://{{outPath}}?fileName=bus-response-${file:onlyname.noext}.dat")
+					// And now insert the values into another template for the control file
+					.log("Writing outgoing control file for Bus Ack...")
+					.to("velocity:control-file.vm")
+					.to("file://{{outPath}}?fileName=bus-response-${file:onlyname.noext}.ctl")
+					.log("Control file written")
+				.otherwise()
+					.log("No business ACK was requested.");
 		/*
 		 * Take the content of the message and persist it to MongoDB
 		 */
@@ -114,14 +141,26 @@ public class CamelRoutes extends RouteBuilder {
 	// Simple class to generate a UUID
 	public class addDynamicProperties implements Processor {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		public ThreadLocal<SimpleDateFormat> formatter;
+		
 		public void process(Exchange exchange) throws Exception {
 	    
-		  // Create a UUID
+		  // Create UUIDs
 		  exchange.setProperty("PAYLOAD_UUID", UUID.randomUUID().toString().toUpperCase());
+		  exchange.setProperty("BUS_ACK_UUID", UUID.randomUUID().toString().toUpperCase());
 	    
 		  // Create a date stamp in UTC format
 		  sdf.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
 		  exchange.setProperty("DATETIME", sdf.format(new Date()));
+		  
+		  // Create a date stamp in HL7 format
+		  formatter = new ThreadLocal<SimpleDateFormat>() {
+				protected SimpleDateFormat initialValue() {
+					return new SimpleDateFormat("yyyyMMddHHmmss");
+				}
+			};
+		  
+		  exchange.setProperty("HL7DATETIME", formatter.get().format(new Date()));
 	  }
 	}
 	

@@ -20,7 +20,7 @@ public class StartResponder {
 
         // Add the MongoDB bean into the registry (no hostname or port required for localhost)
         main.bind("mongoBean", new MongoClient());
-
+        
         // Add routes
         main.addRouteBuilder(new CamelRoutes());
         
