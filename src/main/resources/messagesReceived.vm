@@ -12,26 +12,46 @@ th {
 	background-color: lightgreen;
 }
 </style>
+<script type="text/javascript" language="javascript" src="js/jquery-1.12.0.min.js"></script>
+<script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
 </head>
 <body>
 <h1>DTS Responder</h1>
 <h2>Messages Received</h2>
-<table>
+<table id="messageTable">
+	<thead>
 	<tr>
+		<th>Date/Time Received</th>
 		<th>Tracking ID</th>
 		<th>Message Type</th>
 		<th>Sender</th>
 		<th>&nbsp;</th>
+		<th>&nbsp;</th>
 	</tr>
-#foreach( $message in $body )
-    <tr>
-    	<td>$message.get("itk:header").get("@trackingid")</td>
-    	<td>$message.get("itk:header").get("@service")</td>
-    	<td>$message.get("itk:header").get("itk:senderAddress").get("@uri")</td>
-    	<td><a href="/message?id=$message.get("_id")">Show full message</a></td>
-    </tr>
-#end
+	</thead>
+	<tbody>
+	#foreach( $message in $body )
+	    <tr>
+	    	<td>$message.get("DateTime")</td>
+	    	<td>$message.get("TrackingID")</td>
+	    	<td>$message.get("MessageType")</td>
+	    	<td>$message.get("Sender")</td>
+	    	<td><a href="/message?id=$message.get("_id")">Full message</a></td>
+	    	#if ($message.get("MessageType") == "urn:nhs-itk:services:201005:SendCDADocument-v2-0")
+	    		<td><a href="/rendered?id=$message.get("_id")">Rendered CDA</a></td>
+	    	#else
+	    		<td>&nbsp;</td>
+	    	#end
+	    </tr>
+	#end
+	<tbody>
 </table>
 </ul>
+<script>
+	$(document).ready(function() {
+	    $('#messageTable').DataTable();
+	} );
+</script>
 </body>
 </html>

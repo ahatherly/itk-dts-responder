@@ -3,7 +3,6 @@ package uk.nhs.interoperability.dtsresponder;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 import java.io.File;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -12,14 +11,13 @@ import java.util.Date;
 import java.util.SimpleTimeZone;
 import java.util.UUID;
 
-import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.component.file.GenericFile;
-import org.apache.camel.component.properties.PropertiesComponent;
 import org.apache.camel.model.dataformat.XmlJsonDataFormat;
+import org.apache.commons.codec.binary.Base64;
 
 public class CamelRoutes extends RouteBuilder {
 	
@@ -117,7 +115,11 @@ public class CamelRoutes extends RouteBuilder {
 		 * Take the content of the message and persist it to MongoDB
 		 */
 		from("direct:saveToDatabase")
-			.marshal(xmlJsonFormat)
+			.setProperty("SENDER_ADDRESS",    xpath("/itk:DistributionEnvelope/itk:header/itk:senderAddress/@uri").resultType(String.class).namespaces(ns))
+			.setProperty("TRACKING_ID",       xpath("/itk:DistributionEnvelope/itk:header/@trackingid").resultType(String.class).namespaces(ns))
+			.setProperty("MESSAGE_TYPE",      xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
+			//.to("xslt:addTimestamp.xslt")
+			.process(new createMongoDBJsonDocument())
 			.convertBodyTo(java.lang.String.class)
 			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=insert");
 		
@@ -134,7 +136,40 @@ public class CamelRoutes extends RouteBuilder {
 		 */
 		from("jetty:http://{{webGUIAddress}}/message?traceEnabled=true")
 			.setBody().simple("{\"_id\": {\"$oid\":\"${header.id}\"}}")
-			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findOneByQuery");
+			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findOneByQuery")
+			.process(new returnXMLMessageFromMongoDBJsonDocument());
+		
+		from("jetty:http://{{webGUIAddress}}/rendered?traceEnabled=true")
+			.setBody().simple("{\"_id\": {\"$oid\":\"${header.id}\"}}")
+			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findOneByQuery")
+			.process(new returnCDADocumentFromMongoDBJsonDocument())
+			.to("xslt:nhs_CDA_Document_Renderer.xsl");
+		
+		/*
+		 * Serve up required JS and CSS files
+		 */
+		from("jetty:http://{{webGUIAddress}}/js/jquery-1.12.0.min.js")
+			.process(new Processor() {
+				  public void process(Exchange exchange) throws Exception {
+				    exchange.getOut().setHeader("Content-Type", "application/javascript");
+				    exchange.getOut().setBody(getClass().getResourceAsStream("/js/jquery-1.12.0.min.js"));
+				  }
+			});
+		from("jetty:http://{{webGUIAddress}}/js/jquery.dataTables.min.js")
+			.process(new Processor() {
+				  public void process(Exchange exchange) throws Exception {
+				    exchange.getOut().setHeader("Content-Type", "application/javascript");
+				    exchange.getOut().setBody(getClass().getResourceAsStream("/js/jquery.dataTables.min.js"));
+				  }
+			});
+		from("jetty:http://{{webGUIAddress}}/css/jquery.dataTables.min.css")
+			.process(new Processor() {
+				  public void process(Exchange exchange) throws Exception {
+				    exchange.getOut().setHeader("Content-Type", "text/css");
+				    exchange.getOut().setBody(getClass().getResourceAsStream("/css/jquery.dataTables.min.css"));
+				  }
+			});
+	
     }
 	
 	
@@ -179,5 +214,72 @@ public class CamelRoutes extends RouteBuilder {
 		  Path target = Paths.get((String)exchange.getProperty("DONE_PATH")+File.separator+fileNameOnly);
 		  Files.move(source, target, REPLACE_EXISTING);
 	  }
+	}
+	
+	// Create a JSON document to store in MongoDB with some metadata taken from the message, and
+	// the message itself embedded in a field in the JSON in Base64 format
+	public class createMongoDBJsonDocument implements Processor {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		public void process(Exchange exchange) throws Exception {
+			String body = exchange.getIn().getBody().toString();
+			StringBuilder sb = new StringBuilder();
+			String b64 = new String(Base64.encodeBase64(body.getBytes()));
+			sb.append("{")
+				.append("\"DateTime\":\"").append(sdf.format(new Date())).append("\",")
+				.append("\"TrackingID\":\"").append(exchange.getProperty("TRACKING_ID")).append("\",")
+				.append("\"MessageType\":\"").append(exchange.getProperty("MESSAGE_TYPE")).append("\",")
+				.append("\"Sender\":\"").append(exchange.getProperty("SENDER_ADDRESS")).append("\",")
+				.append("\"MessageB64\":\"").append(b64).append("\"")
+			  .append("}");
+			exchange.getIn().setBody(sb.toString());
+		}
+	}
+	
+	// Create a JSON document to store in MongoDB with some metadata taken from the message, and
+	// the message itself embedded in a field in the JSON in Base64 format
+	public class returnXMLMessageFromMongoDBJsonDocument implements Processor {
+		public void process(Exchange exchange) throws Exception {
+			String body = exchange.getIn().getBody().toString();
+			StringBuilder sb = new StringBuilder();
+			String searchText = "MessageB64\" : \"";
+			int startOfB64 = body.indexOf(searchText)+searchText.length();
+			int endOfB64 = body.indexOf('"', startOfB64);
+			//String b64 = new String(Base64.encodeBase64(body.getBytes()));
+			String b64 = body.substring(startOfB64, endOfB64);
+			String xml = new String(Base64.decodeBase64(b64));
+			exchange.getIn().setBody(xml);
+		}
+	}
+	
+	// Create a JSON document to store in MongoDB with some metadata taken from the message, and
+	// the message itself embedded in a field in the JSON in Base64 format
+	public class returnCDADocumentFromMongoDBJsonDocument implements Processor {
+		public void process(Exchange exchange) throws Exception {
+			// First, extract the XML
+			returnXMLMessageFromMongoDBJsonDocument proc = new returnXMLMessageFromMongoDBJsonDocument();
+			proc.process(exchange);
+			
+			// Now, find the CDA part
+			String body = exchange.getIn().getBody().toString();
+			String searchText = "ClinicalDocument";
+			int startOfCDA = body.indexOf(searchText);
+			int endOfCDA = body.indexOf(searchText, (startOfCDA+searchText.length()));
+			// Backtrack the start tag to the opening <
+			while (body.charAt(startOfCDA) != '<') {
+				startOfCDA--;
+			}
+			// Step forward the end tag to the closing >
+			while (body.charAt(endOfCDA) != '>') {
+				endOfCDA++;
+			}
+			endOfCDA++;
+			
+			if (startOfCDA > -1 && endOfCDA > startOfCDA) {
+				String cda = body.substring(startOfCDA, endOfCDA);
+				exchange.getIn().setBody(cda);
+			} else {
+				exchange.getIn().setBody("Unable to locate CDA document in message");
+			}
+		}
 	}
 }
