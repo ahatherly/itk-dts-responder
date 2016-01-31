@@ -15,4 +15,11 @@
   <Encrypted>N</Encrypted>
   <DataChecksum></DataChecksum>
   <IsCompressed>N</IsCompressed>
+  <StatusRecord>
+    <DateTime>20151023154813</DateTime>
+    <Event>TRANSFER</Event>
+    <Status>SUCCESS</Status>
+    <StatusCode>00</StatusCode>
+    <Description>Transferred to recipient mailbox</Description>
+  </StatusRecord>
 </DTSControl>

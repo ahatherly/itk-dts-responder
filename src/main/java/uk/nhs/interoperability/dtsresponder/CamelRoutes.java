@@ -33,7 +33,8 @@ public class CamelRoutes extends RouteBuilder {
 		/*
 		 * This route will take whatever control files appear and try to read the corresponding dat file
 		 */
-		from("file://{{mailboxPath}}?move={{donePath}}&include={{filenamePattern}}")
+		//from("file://{{mailboxPath}}?move={{donePath}}&include={{filenamePattern}}")
+    	from("file://{{mailboxPath}}?noop=true&include={{filenamePattern}}")
 		  .streamCaching()
 		  // First, check this is a control file
 		  .choice()
@@ -47,6 +48,8 @@ public class CamelRoutes extends RouteBuilder {
 			  		.setProperty("To_DTS",  xpath("/DTSControl/To_DTS").resultType(String.class))
 			  		.setProperty("LocalId",  xpath("/DTSControl/LocalId").resultType(String.class))
 			  		.setProperty("DTSId",  xpath("/DTSControl/DTSId").resultType(String.class))
+			  		// If we are sumulating DTS, update the incoming file to include the transfer elements
+			  		.wireTap("direct:updateIncomingControlFile").end()
 			  		// Now read the corresponding data file, then process it
 			  		.process(new readDataFile())
 			  		.to("direct:handleDataFile")
@@ -54,6 +57,11 @@ public class CamelRoutes extends RouteBuilder {
 			  		// We received some other kind of message, so just log it and stop processing.
 			  		.log("*********** Received an unexpected message, ignoring. *****************");
 		
+    	from("direct:updateIncomingControlFile")
+    	    .convertBodyTo(java.lang.String.class)
+    		.process(new addTransferSuccessToIncomingControlFile())
+    		.log("Added transfer success elements to control file")
+    		.to("file:{{mailboxPath}}");
 		
 		from("direct:handleDataFile")
 			.log("Processing data file...")
@@ -84,11 +92,11 @@ public class CamelRoutes extends RouteBuilder {
 					.log("Writing Infrastructure ACK...")
 					.to("velocity:inf-ack.vm")
 					// Output the result file in the output path
-					.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.dat")
+					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-infack.dat")
 					// And now insert the values into another template for the control file
 					.log("Writing outgoing control file for Inf Ack...")
 					.to("velocity:control-file.vm")
-					.to("file://{{outPath}}?fileName=response-${file:onlyname.noext}.ctl")
+					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-infack.ctl")
 					.log("Control file written")
 				.otherwise()
 					.log("We received a message, but no infrastructure ACK was requested.");
@@ -103,11 +111,11 @@ public class CamelRoutes extends RouteBuilder {
 				    .log("Writing Business ACK...")
 				    .to("velocity:bus-ack.vm")
 				    // Output the result file in the output path
-					.to("file://{{outPath}}?fileName=bus-response-${file:onlyname.noext}.dat")
+					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-busack.dat")
 					// And now insert the values into another template for the control file
 					.log("Writing outgoing control file for Bus Ack...")
 					.to("velocity:control-file.vm")
-					.to("file://{{outPath}}?fileName=bus-response-${file:onlyname.noext}.ctl")
+					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-busack.ctl")
 					.log("Control file written")
 				.otherwise()
 					.log("No business ACK was requested.");
@@ -212,7 +220,7 @@ public class CamelRoutes extends RouteBuilder {
 		  String fileNameOnly = dataFileName.substring(dataFileName.lastIndexOf(File.separator));
 		  Path source = Paths.get(dataFileName);
 		  Path target = Paths.get((String)exchange.getProperty("DONE_PATH")+File.separator+fileNameOnly);
-		  Files.move(source, target, REPLACE_EXISTING);
+		  //Files.move(source, target, REPLACE_EXISTING);
 	  }
 	}
 	
@@ -248,6 +256,21 @@ public class CamelRoutes extends RouteBuilder {
 			String b64 = body.substring(startOfB64, endOfB64);
 			String xml = new String(Base64.decodeBase64(b64));
 			exchange.getIn().setBody(xml);
+		}
+	}
+	
+	// Edit the file to add the transfer success (used when simulating DTS)
+	public class addTransferSuccessToIncomingControlFile implements Processor {
+		public void process(Exchange exchange) throws Exception {
+			String body = exchange.getIn().getBody().toString();
+			System.out.println(body);
+			StringBuilder sb = new StringBuilder();
+			String searchText = "</DTSControl>";
+			int startOfFinalTag = body.indexOf(searchText);
+			sb.append(body.substring(0, startOfFinalTag));
+			sb.append("<StatusRecord><DateTime>20151023154813</DateTime><Event>TRANSFER</Event><Status>SUCCESS</Status><StatusCode>00</StatusCode><Description>Transferred to recipient mailbox</Description></StatusRecord>");
+			sb.append(body.substring(startOfFinalTag));
+			exchange.getIn().setBody(sb.toString());
 		}
 	}
 	
