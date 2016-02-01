@@ -19,10 +19,12 @@ th {
 <body>
 <h1>DTS Responder</h1>
 <h2>Messages Received</h2>
+<a href="/deleteall">Delete all messages</a>
 <table id="messageTable">
 	<thead>
 	<tr>
-		<th>Date/Time Received</th>
+		<th>Date/Time</th>
+		<th>Sent/Received</th>
 		<th>Tracking ID</th>
 		<th>Message Type</th>
 		<th>Sender</th>
@@ -34,6 +36,7 @@ th {
 	#foreach( $message in $body )
 	    <tr>
 	    	<td>$message.get("DateTime")</td>
+	    	<td>$message.get("Type")</td>
 	    	<td>$message.get("TrackingID")</td>
 	    	<td>$message.get("MessageType")</td>
 	    	<td>$message.get("Sender")</td>

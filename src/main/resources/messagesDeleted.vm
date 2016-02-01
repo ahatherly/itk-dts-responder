@@ -1,0 +1,24 @@
+<html>
+<head>
+<style>
+body {
+	font-family: "Comic Sans MS", cursive, sans-serif; 
+}
+td, th {
+	border-bottom: thin solid gray;
+	padding: 6px;
+}
+th {
+	background-color: lightgreen;
+}
+</style>
+<script type="text/javascript" language="javascript" src="js/jquery-1.12.0.min.js"></script>
+<script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
+</head>
+<body>
+<h1>DTS Responder</h1>
+<h2>All messages deleted</h2>
+<a href="/">Back</a>
+</body>
+</html>

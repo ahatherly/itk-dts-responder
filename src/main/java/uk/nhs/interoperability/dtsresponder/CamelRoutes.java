@@ -33,8 +33,8 @@ public class CamelRoutes extends RouteBuilder {
 		/*
 		 * This route will take whatever control files appear and try to read the corresponding dat file
 		 */
-		//from("file://{{mailboxPath}}?move={{donePath}}&include={{filenamePattern}}")
-    	from("file://{{mailboxPath}}?noop=true&include={{filenamePattern}}")
+		from("file://{{mailboxPath}}?move={{donePath}}&include={{filenamePattern}}")
+    	//from("file://{{mailboxPath}}?noop=true&include={{filenamePattern}}")
 		  .streamCaching()
 		  // First, check this is a control file
 		  .choice()
@@ -42,6 +42,8 @@ public class CamelRoutes extends RouteBuilder {
 			  		.log("CONTROL FILE FOUND - attempting to read data file")
 			  		// Store the values from the control file so we can use them in our reply control file
 			  		.setProperty("DONE_PATH", simple("{{donePath}}"))
+			  		.setProperty("SENT_PATH", simple("{{sentPath}}"))
+			  		.setProperty("TYPE", simple("Received"))
 			  		.setProperty("From_ESMTP",  xpath("/DTSControl/From_ESMTP").resultType(String.class))
 			  		.setProperty("From_DTS",  xpath("/DTSControl/From_DTS").resultType(String.class))
 			  		.setProperty("To_ESMTP",  xpath("/DTSControl/To_ESMTP").resultType(String.class))
@@ -58,10 +60,16 @@ public class CamelRoutes extends RouteBuilder {
 			  		.log("*********** Received an unexpected message, ignoring. *****************");
 		
     	from("direct:updateIncomingControlFile")
-    	    .convertBodyTo(java.lang.String.class)
-    		.process(new addTransferSuccessToIncomingControlFile())
-    		.log("Added transfer success elements to control file")
-    		.to("file:{{mailboxPath}}");
+    	    .setHeader("simulateDTS", simple("{{simulateDTS}}"))
+    		.choice()
+		  		.when(header("simulateDTS").isEqualTo("true"))
+		    		.convertBodyTo(java.lang.String.class)
+		    		.process(new addTransferSuccessToIncomingControlFile())
+		    		.log("Added transfer success elements to control file")
+		    		.to("file:{{sentPath}}")
+		    	.otherwise()
+		    		.log("Not sumulating DTS");
+    		
 		
 		from("direct:handleDataFile")
 			.log("Processing data file...")
@@ -90,7 +98,9 @@ public class CamelRoutes extends RouteBuilder {
 				.when().xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:infackrequested']/@value = 'true'", ns)
 				// Insert them into the velocity template
 					.log("Writing Infrastructure ACK...")
+					.setProperty("TYPE", simple("Sent"))
 					.to("velocity:inf-ack.vm")
+					.wireTap("direct:saveToDatabase").end()
 					// Output the result file in the output path
 					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-infack.dat")
 					// And now insert the values into another template for the control file
@@ -109,7 +119,9 @@ public class CamelRoutes extends RouteBuilder {
 			.choice()	
 				.when().xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:ackrequested']/@value = 'true'", ns)
 				    .log("Writing Business ACK...")
+				    .setProperty("TYPE", simple("Sent"))
 				    .to("velocity:bus-ack.vm")
+				    .wireTap("direct:saveToDatabase").end()
 				    // Output the result file in the output path
 					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-busack.dat")
 					// And now insert the values into another template for the control file
@@ -152,6 +164,16 @@ public class CamelRoutes extends RouteBuilder {
 			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=findOneByQuery")
 			.process(new returnCDADocumentFromMongoDBJsonDocument())
 			.to("xslt:nhs_CDA_Document_Renderer.xsl");
+		
+		/*
+		 * Clear all messages
+		 */
+		from("jetty:http://{{webGUIAddress}}/deleteall?traceEnabled=true")
+			.setBody().constant("{\"Type\": \"Sent\"}")
+			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=remove")
+			.setBody().constant("{\"Type\": \"Received\"}")
+			.to("mongodb:mongoBean?database=myDB&collection=receivedDTSDocuments&operation=remove")
+			.to("velocity:messagesDeleted.vm");
 		
 		/*
 		 * Serve up required JS and CSS files
@@ -219,8 +241,8 @@ public class CamelRoutes extends RouteBuilder {
 		  // Move the data file into the done path
 		  String fileNameOnly = dataFileName.substring(dataFileName.lastIndexOf(File.separator));
 		  Path source = Paths.get(dataFileName);
-		  Path target = Paths.get((String)exchange.getProperty("DONE_PATH")+File.separator+fileNameOnly);
-		  //Files.move(source, target, REPLACE_EXISTING);
+		  Path target = Paths.get((String)exchange.getProperty("SENT_PATH")+File.separator+fileNameOnly);
+		  Files.move(source, target, REPLACE_EXISTING);
 	  }
 	}
 	
@@ -233,6 +255,7 @@ public class CamelRoutes extends RouteBuilder {
 			StringBuilder sb = new StringBuilder();
 			String b64 = new String(Base64.encodeBase64(body.getBytes()));
 			sb.append("{")
+				.append("\"Type\":\"").append(exchange.getProperty("TYPE")).append("\",")
 				.append("\"DateTime\":\"").append(sdf.format(new Date())).append("\",")
 				.append("\"TrackingID\":\"").append(exchange.getProperty("TRACKING_ID")).append("\",")
 				.append("\"MessageType\":\"").append(exchange.getProperty("MESSAGE_TYPE")).append("\",")
