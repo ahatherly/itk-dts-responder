@@ -1,5 +1,5 @@
 <itk:DistributionEnvelope xmlns:itk="urn:nhs-itk:ns:201005">
-        <itk:header service="urn:nhs-itk:services:201005:SendBusinessAck-v1-0" trackingid="46C60400-C8DA-439D-8BBD-C5DE34D0CF57">
+        <itk:header service="urn:nhs-itk:services:201005:SendBusinessAck-v1-0" trackingid="${exchange.properties.trackingId}">
                <itk:addresslist>
                        <itk:address uri="${exchange.properties.SENDER_ADDRESS}" />
                </itk:addresslist>

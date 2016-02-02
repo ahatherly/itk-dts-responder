@@ -99,6 +99,7 @@ public class CamelRoutes extends RouteBuilder {
 				// Insert them into the velocity template
 					.log("Writing Infrastructure ACK...")
 					.setProperty("TYPE", simple("Sent"))
+					.setProperty("trackingId", method(new UUIDGenerator()))
 					.to("velocity:inf-ack.vm")
 					.wireTap("direct:saveToDatabase").end()
 					// Output the result file in the output path
@@ -120,6 +121,7 @@ public class CamelRoutes extends RouteBuilder {
 				.when().xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:ackrequested']/@value = 'true'", ns)
 				    .log("Writing Business ACK...")
 				    .setProperty("TYPE", simple("Sent"))
+				    .setProperty("trackingId", method(new UUIDGenerator()))
 				    .to("velocity:bus-ack.vm")
 				    .wireTap("direct:saveToDatabase").end()
 				    // Output the result file in the output path
@@ -326,6 +328,12 @@ public class CamelRoutes extends RouteBuilder {
 			} else {
 				exchange.getIn().setBody("Unable to locate CDA document in message");
 			}
+		}
+	}
+	
+	public static class UUIDGenerator {
+		public String generateId() {
+			return java.util.UUID.randomUUID().toString();
 		}
 	}
 }
