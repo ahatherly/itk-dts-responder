@@ -15,7 +15,7 @@ public class StartResponder {
         
         // Bind some configuration values into Camel so they are available in routes
         PropertiesComponent pc = new PropertiesComponent();
-        pc.setLocation("classpath:responder.properties");
+        pc.setLocation("file:responder.properties");
         main.bind("properties", pc);
 
         // Add the MongoDB bean into the registry (no hostname or port required for localhost)

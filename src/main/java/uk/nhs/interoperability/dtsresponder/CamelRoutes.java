@@ -12,6 +12,7 @@ import java.util.SimpleTimeZone;
 import java.util.UUID;
 
 import org.apache.camel.Exchange;
+import org.apache.camel.Predicate;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;
@@ -38,7 +39,7 @@ public class CamelRoutes extends RouteBuilder {
 		  .streamCaching()
 		  // First, check this is a control file
 		  .choice()
-		  		.when().xpath("/DTSControl/MessageType = 'Data'")
+		  	.when().xpath("/DTSControl/MessageType = 'Data'")
 			  		.log("CONTROL FILE FOUND - attempting to read data file")
 			  		// Store the values from the control file so we can use them in our reply control file
 			  		.setProperty("DONE_PATH", simple("{{donePath}}"))
@@ -50,13 +51,13 @@ public class CamelRoutes extends RouteBuilder {
 			  		.setProperty("To_DTS",  xpath("/DTSControl/To_DTS").resultType(String.class))
 			  		.setProperty("LocalId",  xpath("/DTSControl/LocalId").resultType(String.class))
 			  		.setProperty("DTSId",  xpath("/DTSControl/DTSId").resultType(String.class))
-			  		// If we are sumulating DTS, update the incoming file to include the transfer elements
+			  		// If we are simulating DTS, update the incoming file to include the transfer elements
 			  		.wireTap("direct:updateIncomingControlFile").end()
 			  		// Now read the corresponding data file, then process it
 			  		.process(new readDataFile())
 			  		.to("direct:handleDataFile")
-			  .otherwise()
-			  		// We received some other kind of message, so just log it and stop processing.
+			.otherwise()
+			  		// We received some other kind of message, so just log it and stop .
 			  		.log("*********** Received an unexpected message, ignoring. *****************");
 		
     	from("direct:updateIncomingControlFile")
@@ -71,13 +72,17 @@ public class CamelRoutes extends RouteBuilder {
 		    		.log("Not sumulating DTS");
     		
 		
+		
 		from("direct:handleDataFile")
-			.log("Processing data file...")
+			.log(" data file...")
+			.setHeader("xpathService", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
+			.setHeader("messageType", simple("{{messageTypeToRespondTo}}"))
 			.wireTap("direct:saveToDatabase")
 			// Now, check this data file is a "SendCDA" document
-		  		.choice()
-			  		.when().xpath("/itk:DistributionEnvelope/itk:header/@service = 'urn:nhs-itk:services:201005:SendCDADocument-v2-0'", ns)
-						// Get some more values from the data file to insert into our response data file
+		  	.choice()
+		  		// Compare the allowed message type to the service attribute	
+		  		.when(header("xpathService").isEqualTo(header("messageType")))
+		  				// Get some more values from the data file to insert into our response data file
 						.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
 						.setProperty("RESPONDER_IDENTITY", simple("{{responderIdentity}}"))
 						.setProperty("RECEIVER_ADDRESS",  xpath("/itk:DistributionEnvelope/itk:header/itk:addresslist/itk:address[1]/@uri").resultType(String.class).namespaces(ns))
@@ -89,7 +94,7 @@ public class CamelRoutes extends RouteBuilder {
 						.wireTap("direct:sendInfAckIfRequested").end()
 						.wireTap("direct:waitToSendBusAck").end()
 					.otherwise()
-		  		// We received some other kind of message, so just log it and stop processing.
+		  		// We received some other kind of message, so just log it and stop .
 		  		.log("*********** Received an unexpected message, ignoring. *****************");
 		
 		

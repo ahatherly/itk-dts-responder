@@ -7,8 +7,8 @@
                        <itk:id type="2.16.840.1.113883.2.1.3.2.4.18.27" uri="${exchange.properties.RESPONDER_IDENTITY}" />
                </itk:auditIdentity>
                <itk:manifest count="1">
-                       <itk:manifestitem mimetype="text/xml" base64="false" compressed="false" id="${exchange.properties.PAYLOAD_UUID}"
-                       				encrypted="false" profileid="urn:nhs-en:profile:ITKBusinessAcknowledgement-v1-0" />
+                       <itk:manifestitem mimetype="text/xml" base64="false" compressed="false" id="uuid_${exchange.properties.PAYLOAD_UUID}"
+                       				encrypted="false" profileid="urn:nhs-en:profile:ITKBusinessAcknowledgement-v2-0" />
                </itk:manifest>
                <itk:senderAddress uri="${exchange.properties.RESPONDER_ADDRESS}" />
                <itk:handlingSpecification>
@@ -17,7 +17,7 @@
                </itk:handlingSpecification>
         </itk:header>
         <itk:payloads count="1">
-               <itk:payload id="${exchange.properties.PAYLOAD_UUID}">
+               <itk:payload id="uuid_${exchange.properties.PAYLOAD_UUID}">
                        <hl7:BusinessResponseMessage xmlns:hl7="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                                <hl7:id root="${exchange.properties.BUS_ACK_UUID}" />
                                <hl7:creationTime value="${exchange.properties.HL7DATETIME}" />
