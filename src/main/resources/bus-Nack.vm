@@ -1,0 +1,99 @@
+<itk:DistributionEnvelope xmlns:itk="urn:nhs-itk:ns:201005">
+        <itk:header service="urn:nhs-itk:services:201005:SendBusinessAck-v1-0" trackingid="${exchange.properties.trackingId}">
+               <itk:addresslist>
+                       <itk:address uri="${exchange.properties.SENDER_ADDRESS}" />
+               </itk:addresslist>
+               <itk:auditIdentity>
+                       <itk:id type="2.16.840.1.113883.2.1.3.2.4.18.27" uri="${exchange.properties.RESPONDER_IDENTITY}" />
+               </itk:auditIdentity>
+               <itk:manifest count="1">
+                       <itk:manifestitem mimetype="text/xml" base64="false" compressed="false" id="uuid_${exchange.properties.PAYLOAD_UUID}"
+                       				encrypted="false" profileid="urn:nhs-en:profile:ITKBusinessAcknowledgement-v2-0" />
+               </itk:manifest>
+               <itk:senderAddress uri="${exchange.properties.RESPONDER_ADDRESS}" />
+               <itk:handlingSpecification>
+                       <itk:spec key="urn:nhs-itk:ns:201005:infackrequested" value="true" />
+                       <itk:spec value="urn:nhs-itk:interaction:ITKBusinessAcknowledgement-v1-0" key="urn:nhs-itk:ns:201005:interaction" />
+               </itk:handlingSpecification>
+        </itk:header>
+        <itk:payloads count="1">
+               <itk:payload id="uuid_${exchange.properties.PAYLOAD_UUID}">
+                       <hl7:BusinessResponseMessage xmlns:hl7="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                               <hl7:id root="${exchange.properties.BUS_ACK_UUID}" />
+                               <hl7:creationTime value="${exchange.properties.HL7DATETIME}" />
+                               <hl7:interactionId root="2.16.840.1.113883.2.1.3.2.4.12" extension="${exchange.properties.INTERACTION_ID}" />
+                               <hl7:acknowledgedBy3 typeCode="AE">
+                                      <hl7:conveyingTransmission>
+                                              <hl7:id root="${exchange.properties.TRACKING_ID}" />
+                                      </hl7:conveyingTransmission>
+                               </hl7:acknowledgedBy3>
+                               <hl7:communicationFunction1 typeCode="SND">
+                                      <hl7:entity classCode="ENT" determinerCode="INSTANCE">
+                                              <hl7:id root="2.16.840.1.113883.2.1.3.2.4.18.22" extension="${exchange.properties.RESPONDER_ADDRESS}" />
+                                      </hl7:entity>
+                               </hl7:communicationFunction1>
+                               <hl7:communicationFunction typeCode="RCV">
+                                      <hl7:entity classCode="ENT" determinerCode="INSTANCE">
+                                              <hl7:id root="2.16.840.1.113883.2.1.3.2.4.18.22" extension="${exchange.properties.SENDER_ADDRESS}" />
+                                      </hl7:entity>
+                               </hl7:communicationFunction>
+                               <hl7:controlActEvent1 classCode="CACT" moodCode="EVN">
+                                      <hl7:author typeCode="AUT" contextControlCode="OP">
+                                              <hl7:COCD_TP145207GB01.AssignedAuthorDevice classCode="ASSIGNED">
+                                                     <hl7:id root="2.16.840.1.113883.2.1.3.2.4.18.24" extension="ITK-NICA-TKW" />
+                                                     <hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145207GB01#AssignedAuthorDevice" />
+                                                     <hl7:assignedAuthoringDevice classCode="DEV" determinerCode="INSTANCE">
+                                                             <hl7:manufacturerModelName>ITK Accreditation</hl7:manufacturerModelName>
+                                                             <hl7:softwareName>uk.nhs.interoperability.dtsresponder</hl7:softwareName>
+                                                             <hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145207GB01#assignedAuthoringDevice" />
+                                                     </hl7:assignedAuthoringDevice>
+                                                     <hl7:representedOrganization classCode="ORG" determinerCode="INSTANCE">
+                                                             <hl7:id root="2.16.840.1.113883.2.1.3.2.4.19.1" extension="X09" />
+                                                             <hl7:name>HSCIC</hl7:name>
+                                                             <hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145207GB01#representedOrganization" />
+                                                     </hl7:representedOrganization>
+                                              </hl7:COCD_TP145207GB01.AssignedAuthorDevice>
+                                      </hl7:author>
+                               </hl7:controlActEvent1>
+                            <hl7:acknowledgedBy2 typeCode="AE">
+							<hl7:conveyingTransmission>
+								<hl7:id root="${exchange.properties.ORIG_PAYLOAD_ID}" /> 
+								<hl7:controlActEvent classCode="CACT" moodCode="EVN">
+									<hl7:author typeCode="AUT">
+										<hl7:COCD_TP145200GB01.AssignedAuthor classCode="ASSIGNED">
+											<hl7:code code="NR0080" codeSystem="2.16.840.1.113883.2.1.3.2.4.17.124" displayName="Staff Grade" /> 
+											<hl7:id root="2.16.840.1.113883.2.1.3.2.4.18.24" extension="12367890" /> 
+											<hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145200GB01#AssignedAuthor" /> 
+											<hl7:assignedPerson classCode="PSN" determinerCode="INSTANCE">
+												<hl7:name>Mesh Responder</hl7:name> 
+												<hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145200GB01#assignedPerson" /> 
+											</hl7:assignedPerson>
+											<hl7:representedOrganization classCode="ORG" determinerCode="INSTANCE">
+												<hl7:id root="2.16.840.1.113883.2.1.3.2.4.19.1" extension="Y123456" /> 
+												<hl7:name>HSCIC NHS Trust</hl7:name> 
+												<hl7:templateId root="2.16.840.1.113883.2.1.3.2.4.18.2" extension="COCD_TP145200GB01#representedOrganization" /> 
+											</hl7:representedOrganization>
+										</hl7:COCD_TP145200GB01.AssignedAuthor>
+									</hl7:author>
+									<hl7:reason typeCode="RSON">
+										<hl7:detectedIssueEvent classCode="ALRT" moodCode="EVN">
+											<hl7:text>Further business details relating to payload response</hl7:text> 
+										</hl7:detectedIssueEvent>
+									</hl7:reason>
+									<hl7:reason typeCode="RSON">
+										<hl7:detectedIssueEvent classCode="ALRT" moodCode="EVN">
+											<hl7:code code="410" codeSystem="2.16.840.1.113883.2.1.3.2.4.18.30.180999" displayName="Patient not known here">
+												<hl7:qualifier code="ER" codeSystem="2.16.840.1.113883.2.1.3.2.4.17.317" /> 
+											</hl7:code>
+										</hl7:detectedIssueEvent>
+									</hl7:reason>
+								</hl7:controlActEvent>
+							</hl7:conveyingTransmission>
+							<hl7:acknowledgementDetail typeCode="IF">
+								<hl7:code code="LOCAL12345" displayName="FURTHER INFO" /> 
+							</hl7:acknowledgementDetail>
+						</hl7:acknowledgedBy2>
+                      </hl7:BusinessResponseMessage>
+               </itk:payload>
+        </itk:payloads>
+</itk:DistributionEnvelope>

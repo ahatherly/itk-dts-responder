@@ -1,5 +1,5 @@
 <itk:DistributionEnvelope xmlns:itk="urn:nhs-itk:ns:201005" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-        <itk:header service="urn:nhs-itk:services:201005:SendInfrastructureAck-v1-0" trackingid="${exchange.properties.trackingId}">
+        <itk:header service="${exchange.properties.SERVICE}" trackingid="${exchange.properties.trackingId}">
                <itk:addresslist>
                        <itk:address uri="${exchange.properties.SENDER_ADDRESS}" />
                </itk:addresslist>
@@ -17,7 +17,7 @@
         <itk:payloads count="1">
                <itk:payload id="uuid_${exchange.properties.PAYLOAD_UUID}">
                        <itk:InfrastructureResponse timestamp="${exchange.properties.DATETIME}"
-                       				serviceRef="urn:nhs-itk:services:201005:SendCDADocument-v2-0"
+                       				serviceRef="${exchange.properties.SERVICE}"
                        				trackingIdRef="${exchange.properties.TRACKING_ID}" result="OK">
                                <itk:reportingIdentity>
                                       <itk:id uri="${exchange.properties.RESPONDER_IDENTITY}" />

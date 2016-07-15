@@ -30,7 +30,6 @@ public class CamelRoutes extends RouteBuilder {
     	ns.add("hl7", "urn:hl7-org:v3");
     	ns.add("npfitlc", "NPFIT:HL7:Localisation");
 		
-    	
 		/*
 		 * This route will take whatever control files appear and try to read the corresponding dat file
 		 */
@@ -76,14 +75,17 @@ public class CamelRoutes extends RouteBuilder {
 		from("direct:handleDataFile")
 			.log(" data file...")
 			.setHeader("xpathService", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
-			.setHeader("messageType", simple("{{messageTypeToRespondTo}}"))
+			//.setHeader("messageType", simple("{{messageTypeToRespondTo}}"))
 			.wireTap("direct:saveToDatabase")
+			
+			
 			// Now, check this data file is a "SendCDA" document
 		  	.choice()
 		  		// Compare the allowed message type to the service attribute	
-		  		.when(header("xpathService").isEqualTo(header("messageType")))
+		  		.when(header("xpathService").isEqualTo(header("urn:nhs-itk:services:201005:sendDistEnvelope")))
 		  				// Get some more values from the data file to insert into our response data file
-						.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
+		  				.setProperty("SERVICE", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
+		  				.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
 						.setProperty("RESPONDER_IDENTITY", simple("{{responderIdentity}}"))
 						.setProperty("RECEIVER_ADDRESS",  xpath("/itk:DistributionEnvelope/itk:header/itk:addresslist/itk:address[1]/@uri").resultType(String.class).namespaces(ns))
 						.setProperty("SENDER_ADDRESS",    xpath("/itk:DistributionEnvelope/itk:header/itk:senderAddress/@uri").resultType(String.class).namespaces(ns))
@@ -105,7 +107,7 @@ public class CamelRoutes extends RouteBuilder {
 					.log("Writing Infrastructure ACK...")
 					.setProperty("TYPE", simple("Sent"))
 					.setProperty("trackingId", method(new UUIDGenerator()))
-					.to("velocity:inf-ack.vm")
+					.to("velocity:{{infAck}}.vm")
 					.wireTap("direct:saveToDatabase").end()
 					// Output the result file in the output path
 					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-infack.dat")
@@ -127,7 +129,7 @@ public class CamelRoutes extends RouteBuilder {
 				    .log("Writing Business ACK...")
 				    .setProperty("TYPE", simple("Sent"))
 				    .setProperty("trackingId", method(new UUIDGenerator()))
-				    .to("velocity:bus-ack.vm")
+				    .to("velocity:{{busAck}}.vm")
 				    .wireTap("direct:saveToDatabase").end()
 				    // Output the result file in the output path
 					.to("file://{{outPath}}?fileName=${file:onlyname.noext}-busack.dat")
@@ -220,7 +222,8 @@ public class CamelRoutes extends RouteBuilder {
 		  // Create UUIDs
 		  exchange.setProperty("PAYLOAD_UUID", UUID.randomUUID().toString().toUpperCase());
 		  exchange.setProperty("BUS_ACK_UUID", UUID.randomUUID().toString().toUpperCase());
-	    
+		  exchange.setProperty("ERROR_UUID", UUID.randomUUID().toString().toUpperCase());
+		  
 		  // Create a date stamp in UTC format
 		  sdf.setTimeZone(new SimpleTimeZone(SimpleTimeZone.UTC_TIME, "UTC"));
 		  exchange.setProperty("DATETIME", sdf.format(new Date()));
@@ -338,7 +341,7 @@ public class CamelRoutes extends RouteBuilder {
 	
 	public static class UUIDGenerator {
 		public String generateId() {
-			return java.util.UUID.randomUUID().toString();
+			return java.util.UUID.randomUUID().toString().toUpperCase();
 		}
 	}
 }

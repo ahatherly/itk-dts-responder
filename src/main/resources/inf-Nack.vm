@@ -17,12 +17,19 @@
         <itk:payloads count="1">
                <itk:payload id="uuid_${exchange.properties.PAYLOAD_UUID}">
                        <itk:InfrastructureResponse timestamp="${exchange.properties.DATETIME}"
-                       				serviceRef="urn:nhs-itk:services:201005:SendCDADocument-v2-0"
-                       				trackingIdRef="${exchange.properties.TRACKING_ID}" result="OK">
+                       				serviceRef="urn:nhs-itk:services:201005:sendDistEnvelope"
+                       				trackingIdRef="${exchange.properties.TRACKING_ID}" result="Failure">
                                <itk:reportingIdentity>
                                       <itk:id uri="${exchange.properties.RESPONDER_IDENTITY}" />
                                </itk:reportingIdentity>
-                                <itk:errors />
+                       <itk:errors>
+							<itk:errorInfo>
+								<itk:ErrorID>"${exchange.properties.ERROR_UUID}"</itk:ErrorID>
+								<itk:ErrorCode codeSystem="2.16.840.1.113883.2.1.3.2.4.17.516">DE0009</itk:ErrorCode>
+								<itk:ErrorText>Distribution Envelope Handling Specifications Processing Error</itk:ErrorText>
+								<itk:ErrorDiagnosticText>MESH Responder Negative Test</itk:ErrorDiagnosticText>
+							</itk:errorInfo>
+					</itk:errors>
                        </itk:InfrastructureResponse>
                </itk:payload>
         </itk:payloads>
