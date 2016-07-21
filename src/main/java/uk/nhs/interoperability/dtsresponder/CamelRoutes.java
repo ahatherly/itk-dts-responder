@@ -55,9 +55,9 @@ public class CamelRoutes extends RouteBuilder {
 			  		// Now read the corresponding data file, then process it
 			  		.process(new readDataFile())
 			  		.to("direct:handleDataFile")
-			.otherwise()
+		      .otherwise()
 			  		// We received some other kind of message, so just log it and stop .
-			  		.log("*********** Received an unexpected message, ignoring. *****************");
+		      		.log("*********** Received an unexpected message, ignoring. *****************");
 		
     	from("direct:updateIncomingControlFile")
     	    .setHeader("simulateDTS", simple("{{simulateDTS}}"))
@@ -71,18 +71,28 @@ public class CamelRoutes extends RouteBuilder {
 		    		.log("Not sumulating DTS");
     		
 		
-		
 		from("direct:handleDataFile")
 			.log(" data file...")
 			.setHeader("xpathService", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
-			//.setHeader("messageType", simple("{{messageTypeToRespondTo}}"))
 			.wireTap("direct:saveToDatabase")
 			
 			
-			// Now, check this data file is a "SendCDA" document
+			// Now, route according to service attribute
 		  	.choice()
-		  		// Compare the allowed message type to the service attribute	
-		  		.when(header("xpathService").isEqualTo(header("urn:nhs-itk:services:201005:sendDistEnvelope")))
+		  		.when().xpath("boolean(/itk:DistributionEnvelope/itk:header[@service='urn:nhs-itk:services:201005:sendDistEnvelope']/@service) = 'true'", ns)
+		  				// Get some more values from the data file to insert into our response data file
+		  				.setProperty("SERVICE", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
+		  				.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
+						.setProperty("RESPONDER_IDENTITY", simple("{{responderIdentity}}"))
+						.setProperty("RECEIVER_ADDRESS",  xpath("/itk:DistributionEnvelope/itk:header/itk:addresslist/itk:address[1]/@uri").resultType(String.class).namespaces(ns))
+						.setProperty("SENDER_ADDRESS",    xpath("/itk:DistributionEnvelope/itk:header/itk:senderAddress/@uri").resultType(String.class).namespaces(ns))
+						.setProperty("TRACKING_ID",       xpath("/itk:DistributionEnvelope/itk:header/@trackingid").resultType(String.class).namespaces(ns))
+						.setProperty("INTERACTION_ID",    xpath("/itk:DistributionEnvelope/itk:header/itk:handlingSpecification/itk:spec[@key='urn:nhs-itk:ns:201005:interaction']/@value").resultType(String.class).namespaces(ns))
+						.setProperty("ORIG_PAYLOAD_ID",   xpath("/itk:DistributionEnvelope/itk:payloads/itk:payload/@id").resultType(String.class).namespaces(ns))
+						.process(new addDynamicProperties())
+						.wireTap("direct:sendInfAckIfRequested").end()
+						.wireTap("direct:waitToSendBusAck").end()
+				 .when().xpath("boolean(/itk:DistributionEnvelope/itk:header[@service='urn:nhs-itk:services:201005:SendCDADocument-v2-0']/@service) = 'true'", ns)
 		  				// Get some more values from the data file to insert into our response data file
 		  				.setProperty("SERVICE", xpath("/itk:DistributionEnvelope/itk:header/@service").resultType(String.class).namespaces(ns))
 		  				.setProperty("RESPONDER_ADDRESS", simple("{{responderAddress}}"))
